@@ -1,0 +1,17 @@
+{
+  "name": "parabank-test-automation",
+  "version": "1.0.0",
+  "description": "Automated test suite for ParaBank user registration",
+  "main": "playwright-test.js",
+  "scripts": {
+    "test": "node playwright-test.js",
+    "install-playwright": "npx playwright install chromium",
+    "test-ci": "npm run install-playwright && npm test"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0"
+  },
+  "keywords": ["testing", "automation", "playwright", "parabank"],
+  "author": "Test Automation Engineer",
+  "license": "MIT"
+}
