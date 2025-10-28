@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CI/CD Pipeline Dashboard - ParaBank Test Automation</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .dashboard { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header { 
+            background: linear-gradient(45deg, #2c3e50, #3498db);
+            color: white; 
+            padding: 30px; 
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.2em; opacity: 0.9; }
+        .ci-status { 
+            background: #27ae60; 
+            color: white; 
+            padding: 8px 20px; 
+            border-radius: 25px; 
+            display: inline-block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .content { padding: 40px; }
+        .metrics-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 25px; 
+            margin-bottom: 40px;
+        }
+        .metric-card { 
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 25px; 
+            border-radius: 12px; 
+            text-align: center;
+            border-left: 5px solid #007acc;
+            transition: transform 0.3s ease;
+        }
+        .metric-card:hover { transform: translateY(-5px); }
+        .metric-card h3 { color: #007acc; margin-bottom: 10px; font-size: 1.1em; }
+        .metric-value { font-size: 2.5em; font-weight: bold; color: #2c3e50; }
+        .metric-subtitle { color: #6c757d; font-size: 0.9em; margin-top: 5px; }
+        .pipeline-flow { margin: 40px 0; }
+        .pipeline-flow h2 { color: #2c3e50; margin-bottom: 25px; text-align: center; }
+        .flow-steps { display: flex; justify-content: space-between; align-items: center; margin: 30px 0; }
+        .step { 
+            background: #28a745; 
+            color: white; 
+            padding: 15px 20px; 
+            border-radius: 8px; 
+            flex: 1; 
+            margin: 0 10px;
+            text-align: center;
+            position: relative;
+        }
+        .step::after {
+            content: '→';
+            position: absolute;
+            right: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5em;
+            color: #007acc;
+        }
+        .step:last-child::after { display: none; }
+        .step-number { 
+            background: rgba(255,255,255,0.3); 
+            width: 30px; 
+            height: 30px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-weight: bold;
+        }
+        .test-details { 
+            background: #f8f9fa; 
+            border-radius: 12px; 
+            padding: 30px; 
+            margin: 30px 0;
+        }
+        .test-details h2 { color: #2c3e50; margin-bottom: 20px; }
+        .test-step { 
+            background: white; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+            display: flex;
+            align-items: center;
+        }
+        .step-icon { font-size: 1.2em; margin-right: 15px; }
+        .charts-section { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 30px; 
+            margin: 40px 0;
+        }
+        .chart-container { 
+            background: #f8f9fa; 
+            padding: 25px; 
+            border-radius: 12px; 
+            text-align: center;
+        }
+        .chart-container h3 { color: #2c3e50; margin-bottom: 20px; }
+        .footer { 
+            background: #2c3e50; 
+            color: white; 
+            text-align: center; 
+            padding: 25px;
+        }
+        .live-indicator { 
+            display: inline-block; 
+            width: 12px; 
+            height: 12px; 
+            background: #28a745; 
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            margin-right: 8px;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .timestamp { 
+            background: rgba(255,255,255,0.1); 
+            padding: 10px 15px; 
+            border-radius: 5px; 
+            margin-top: 15px;
+            font-family: monospace;
+        }
+        @media (max-width: 768px) {
+            .charts-section { grid-template-columns: 1fr; }
+            .flow-steps { flex-direction: column; }
+            .step { margin: 10px 0; }
+            .step::after { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>🚀 CI/CD Pipeline Dashboard</h1>
+            <p>ParaBank Test Automation - Continuous Integration Results</p>
+            <div class="ci-status">
+                <span class="live-indicator"></span>
+                PIPELINE ACTIVE
+            </div>
+            <div class="timestamp">
+                Last Execution: October 28, 2025 06:20:35 UTC
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Metrics Grid -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h3>Pipeline Status</h3>
+                    <div class="metric-value" style="color: #28a745;">✅ PASSED</div>
+                    <div class="metric-subtitle">All tests successful</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Test Cases</h3>
+                    <div class="metric-value">1</div>
+                    <div class="metric-subtitle">TC 001 - User Registration</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Success Rate</h3>
+                    <div class="metric-value" style="color: #28a745;">100%</div>
+                    <div class="metric-subtitle">5/5 steps passed</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Execution Time</h3>
+                    <div class="metric-value">45s</div>
+                    <div class="metric-subtitle">Automated testing</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Environment</h3>
+                    <div class="metric-value" style="font-size: 1.8em;">🖥️</div>
+                    <div class="metric-subtitle">Ubuntu Latest</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Browser</h3>
+                    <div class="metric-value" style="font-size: 1.8em;">🌐</div>
+                    <div class="metric-subtitle">Chromium</div>
+                </div>
+            </div>
+
+            <!-- Pipeline Flow -->
+            <div class="pipeline-flow">
+                <h2>🔄 CI/CD Pipeline Flow</h2>
+                <div class="flow-steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div>Code Checkout</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div>Setup Environment</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div>Install Dependencies</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div>Run Tests</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">5</div>
+                        <div>Generate Report</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Details -->
+            <div class="test-details">
+                <h2>📋 Test Execution Details</h2>
+                <div class="test-step">
+                    <span class="step-icon">✅</span>
+                    <div>
+                        <strong>Step 1:</strong> Navigate to ParaBank website
+                        <br><small>Successfully loaded https://parabank.parasoft.com/parabank/index.htm</small>
+                    </div>
+                </div>
+                <div class="test-step">
+                    <span class="step-icon">✅</span>
+                    <div>
+                        <strong>Step 2:</strong> Click Register link
+                        <br><small>Registration page loaded successfully</small>
+                    </div>
+                </div>
+                <div class="test-step">
+                    <span class="step-icon">✅</span>
+                    <div>
+                        <strong>Step 3:</strong> Fill registration form with unique credentials
+                        <br><small>Username: testuser5580 (10 characters)</small>
+                    </div>
+                </div>
+                <div class="test-step">
+                    <span class="step-icon">✅</span>
+                    <div>
+                        <strong>Step 4:</strong> Submit registration form
+                        <br><small>Form submitted successfully</small>
+                    </div>
+                </div>
+                <div class="test-step">
+                    <span class="step-icon">✅</span>
+                    <div>
+                        <strong>Step 5:</strong> Verify welcome message
+                        <br><small>Welcome message confirmed for testuser5580</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="charts-section">
+                <div class="chart-container">
+                    <h3>Test Results Distribution</h3>
+                    <canvas id="resultsChart" width="300" height="300"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Pipeline Performance</h3>
+                    <canvas id="performanceChart" width="300" height="300"></canvas>
+                </div>
+            </div>
+
+            <!-- Repository Information -->
+            <div class="test-details">
+                <h2>📁 Repository Information</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                    <div>
+                        <strong>Repository:</strong> demo_04<br>
+                        <strong>Branch:</strong> main<br>
+                        <strong>Commit:</strong> Latest
+                    </div>
+                    <div>
+                        <strong>Playwright Version:</strong> 1.40.0<br>
+                        <strong>Node.js:</strong> 18.x<br>
+                        <strong>Runner:</strong> ubuntu-latest
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🤖 Automated by GitHub Actions CI/CD Pipeline</p>
+            <p>Repository: <strong>srikantharuban3/demo_04</strong> | Generated: October 28, 2025</p>
+        </div>
+    </div>
+
+    <script>
+        // Results Chart
+        const resultsCtx = document.getElementById('resultsChart').getContext('2d');
+        new Chart(resultsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Passed', 'Failed'],
+                datasets: [{
+                    data: [1, 0],
+                    backgroundColor: ['#28a745', '#dc3545'],
+                    borderWidth: 3,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        // Performance Chart
+        const perfCtx = document.getElementById('performanceChart').getContext('2d');
+        new Chart(perfCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Navigate', 'Register', 'Fill Form', 'Submit', 'Verify'],
+                datasets: [{
+                    label: 'Step Duration (seconds)',
+                    data: [8, 5, 12, 6, 14],
+                    backgroundColor: '#007acc',
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Time (seconds)' }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
