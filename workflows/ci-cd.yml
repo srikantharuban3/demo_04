@@ -1,0 +1,76 @@
+name: "ParaBank CI/CD Pipeline"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test-parabank:
+    name: "ParaBank Registration Test"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+        
+      - name: "Setup Node.js"
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: "Install Dependencies"
+        run: |
+          npm install
+          npx playwright install chromium
+          
+      - name: "Run ParaBank Tests"
+        run: npm test
+        
+      - name: "Upload Test Results"
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            test-results.json
+            *.png
+            
+      - name: "Generate Test Summary"
+        if: always()
+        run: |
+          if [ -f "test-results.json" ]; then
+            echo "## 🧪 ParaBank Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            STATUS=$(node -e "const r=JSON.parse(require('fs').readFileSync('test-results.json','utf8')); console.log(r.status)")
+            STEPS=$(node -e "const r=JSON.parse(require('fs').readFileSync('test-results.json','utf8')); console.log(r.steps.length)")
+            
+            if [ "$STATUS" = "PASSED" ]; then
+              echo "### ✅ Tests PASSED" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "🎉 **Registration test completed successfully!**" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "### ❌ Tests FAILED" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Test Case | TC 001 - User Registration |" >> $GITHUB_STEP_SUMMARY
+            echo "| Status | $STATUS |" >> $GITHUB_STEP_SUMMARY
+            echo "| Steps Executed | $STEPS |" >> $GITHUB_STEP_SUMMARY
+            echo "| Success Rate | $([ "$STATUS" = "PASSED" ] && echo "100%" || echo "0%") |" >> $GITHUB_STEP_SUMMARY
+            echo "| Timestamp | $(date '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📋 Test Steps" >> $GITHUB_STEP_SUMMARY
+            node -e "const r=JSON.parse(require('fs').readFileSync('test-results.json','utf8')); r.steps.forEach((s,i) => console.log((i+1) + '. ' + (s.status==='PASSED'?'✅':'❌') + ' ' + s.description))" >> $GITHUB_STEP_SUMMARY
+            
+          else
+            echo "## ❌ Test Execution Failed" >> $GITHUB_STEP_SUMMARY
+            echo "No test results available" >> $GITHUB_STEP_SUMMARY
+          fi
